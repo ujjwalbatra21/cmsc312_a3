@@ -13,7 +13,7 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- // #include "Csem_correct.h"
+ #include "Csem_correct.h"
 
  #define SIZE 5
  #define NUMB_THREADS 6
@@ -74,16 +74,16 @@ Csem_t *empty_shm, *full_shm, *mutex_shm;
 	 printf("yeet\n");
      while (i++ < PRODUCER_LOOPS) {
 		 printf("enter loop\n");
-         sem_wait(empty_sem);
+         Csem_wait(empty_shm);
          /* there could be race condition here, that could cause
             buffer underflow error */
 		 printf("wait_empty\n");
-         sem_wait(mutex_sem);
+         Csem_wait(mutex_shm);
 		 printf("wait_mutex\n");
          value = dequeuebuffer(value);
-         sem_post(mutex_sem);
+         Csem_post(mutex_shm);
 		 printf("post_mutex\n");
-         sem_post(full_sem); // post (increment) fullbuffer semaphore
+         Csem_post(full_shm); // post (increment) fullbuffer semaphore
 		 printf("post_full\n");
          printf("Consumer %d dequeue %d from buffer\n", thread_numb, value);
     }
@@ -181,13 +181,13 @@ Csem_t *empty_shm, *full_shm, *mutex_shm;
      // pthread_mutex_init(&buffer_mutex, NULL);
 
 
-	Csem_init(&full_sem, // sem_t *sem
+	Csem_init(full_shm, // sem_t *sem
 	     0, // int pshared. 0 = shared between threads of process,  1 = shared between processes
 	     SIZE); // unsigned int value. Initial value
-    Csem_init(&empty_sem,
+    Csem_init(empty_shm,
              0,
              0);
-	Csem_init(&empty_sem,
+	Csem_init(mutex_shm,
 	      0,
 	      1);
 
@@ -225,9 +225,9 @@ Csem_t *empty_shm, *full_shm, *mutex_shm;
      for (i = 0; i < NUMB_THREADS; i++)
          pthread_join(thread[i], NULL);
 
-	 sem_destroy(mutex_sem);
-     sem_destroy(full_sem);
-     sem_destroy(empty_sem);
+	 Csem_destroy(mutex_shm);
+     Csem_destroy(full_shm);
+     Csem_destroy(empty_shm);
 
      return 0;
  }

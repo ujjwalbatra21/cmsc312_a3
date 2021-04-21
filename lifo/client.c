@@ -13,10 +13,10 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- // #include "Csem_correct.h"
+ #include "Csem_correct.h"
 
  #define SIZE 5
- #define NUMB_THREADS 6
+ #define NUMB_THREADS 9
  #define PRODUCER_LOOPS 2
 
 
@@ -37,14 +37,16 @@
 
  int *buff_shm, *buffind_shm;
 
-  sem_t *full_sem;
-  sem_t *empty_sem;
-  sem_t *mutex_sem;
-  char *name_full = "/full_sem";
-  char *name_empty = "/empty_sem";
-  char *name_mutex = "/mutex_sem";
+  // sem_t *full_sem;
+  // sem_t *empty_sem;
+  // sem_t *mutex_sem;
+  // char *name_full = "/full_sem";
+  // char *name_empty = "/empty_sem";
+  // char *name_mutex = "/mutex_sem";
   // Csem_t full_sem_p;
   // Csem_t empty_sem_p;
+  Csem_t *empty_shm, *full_shm, *mutex_shm;
+
 
 
   void insertbuffer(int value) {
@@ -72,16 +74,16 @@
      while (i++ < PRODUCER_LOOPS) {
          sleep(rand() % 10);
          value = rand() % 100;
-         sem_wait(full_sem); // sem=0: wait. sem>0: go and decrement it
+         Csem_wait(full_shm); // sem=0: wait. sem>0: go and decrement it
          /* possible race condition here. After this thread wakes up,
             another thread could aqcuire mutex before this one, and add to list.
             Then the list would be full again
             and when this thread tried to insert to buffer there would be
             a buffer overflow error */
-         sem_wait(mutex_sem); /* protecting critical section */
+         Csem_wait(mutex_shm); /* protecting critical section */
          insertbuffer(value);
-         sem_post(mutex_sem);
-         sem_post(empty_sem); // post (increment) emptybuffer semaphore
+         Csem_post(mutex_shm);
+         Csem_post(empty_shm); // post (increment) emptybuffer semaphore
          printf("Producer %d added %d to buffer\n", thread_numb, value);
      }
      pthread_exit(0);
@@ -89,10 +91,10 @@
 
 
  int main(int argc, int **argv) {
-	 buffer_index = 0;
+	 //buffer_index = 0;
 
-	 key_t buff_key, buffind_key;
-	 int buff_shmid, buffind_shmid;
+	 key_t buff_key, buffind_key, empty_key, full_key, mutex_key;
+	int buff_shmid, buffind_shmid, empty_shmid, full_shmid, mutex_shmid;
 
 	 // int *buff_shm, *buffind_shm;
 
@@ -113,7 +115,7 @@
 	/*******************************************************************************
 						 SHARED MEMORY ENSTANTIATION
 	*******************************************************************************/
-	if( (empty_shmid = shmget(empty_key, sizeof(Csem_t), IPC_CREAT | 0666)) < 0 ) //if creation fails
+	if( (empty_shmid = shmget(empty_key, sizeof(Csem_t), 0666)) < 0 ) //if creation fails
 	{
 		perror("buff shmget"); //issue error
 		exit(1); //exit
@@ -125,7 +127,7 @@
 		exit(1);
 	}
 
-	if( (full_shmid = shmget(full_key, sizeof(Csem_t), IPC_CREAT | 0666)) < 0 ) //if creation fails
+	if( (full_shmid = shmget(full_key, sizeof(Csem_t), 0666)) < 0 ) //if creation fails
 	{
 		perror("buff shmget"); //issue error
 		exit(1); //exit
@@ -137,7 +139,7 @@
 		exit(1);
 	}
 
-	if( (mutex_shmid = shmget(mutex_key, sizeof(Csem_t), IPC_CREAT | 0666)) < 0 ) //if creation fails
+	if( (mutex_shmid = shmget(mutex_key, sizeof(Csem_t), 0666)) < 0 ) //if creation fails
 	{
 		perror("buff shmget"); //issue error
 		exit(1); //exit
@@ -150,7 +152,7 @@
 	}
 
 
-	
+
 
 	 if( (buff_shmid = shmget(buff_key, SIZE*4*sizeof(int), 0666)) < 0 ) //if creation fails
 	 {
@@ -180,13 +182,13 @@
 	 printf("shm init complete\n");
 
 
-	 full_sem = sem_open(name_full, // sem_t *sem
-	 		O_RDWR);
-	if()
-	 empty_sem =sem_open(name_empty,
-		 	O_RDWR);
-	 mutex_sem =sem_open(name_mutex,
-	 	  	O_RDWR);
+	//  full_sem = sem_open(name_full, // sem_t *sem
+	//  		O_RDWR);
+	// if()
+	//  empty_sem =sem_open(name_empty,
+	// 	 	O_RDWR);
+	//  mutex_sem =sem_open(name_mutex,
+	//  	  	O_RDWR);
 
 	sleep(2);
 
@@ -219,9 +221,9 @@
      for (i = 0; i < NUMB_THREADS; i++)
          pthread_join(thread[i], NULL);
 
-	 sem_destroy(mutex_sem);
-     sem_destroy(full_sem);
-     sem_destroy(empty_sem);
+	 Csem_destroy(mutex_shm);
+     Csem_destroy(full_shm);
+     Csem_destroy(empty_shm);
 
      return 0;
  }
