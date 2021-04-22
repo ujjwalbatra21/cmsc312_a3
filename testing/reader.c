@@ -13,10 +13,15 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- #define _DEBUG_
+ // #define _SHM_SEM_
 //#define _DEBUG1_
 
 #define N 4
+
+#define WRD_NAME "/wrdsem"
+#define WRT_NAME "/wrtsem"
+#define MUTEX_NAME "/mutexsem"
+
 
 sem_t *wrt;
 sem_t *wrd;
@@ -25,6 +30,7 @@ int *cnt; //starts at 1
 int *numreader; //starts at 0
 int *trigger;
 
+    pthread_t read[10];
 
 
 void *reader(void *rno)
@@ -58,7 +64,7 @@ void *reader(void *rno)
 int main()
 {
 
-    pthread_t read[10];
+
 
 		 key_t cnt_key, numreader_key, wrt_key, wrd_key, mutex_key;
 
@@ -79,9 +85,11 @@ int main()
 		 trigger_key = 4132;
 
 
-		/*******************************************************************************
-							 SHARED MEMORY ENSTANTIATION
-		*******************************************************************************/
+		// /*******************************************************************************
+		// 					 SHARED MEMORY ENSTANTIATION
+		// *******************************************************************************/
+#ifdef _SHM_SEM_
+		printf("shm_sem\n");
 		if( (wrt_shmid = shmget(wrt_key, sizeof(sem_t), IPC_CREAT | 0666)) < 0 ) //if creation fails
 		{
 			perror("wrt shmget"); //issue error
@@ -117,7 +125,7 @@ int main()
 			perror("mutex shmat");
 			exit(1);
 		}
-
+#endif
 
 
 
@@ -161,10 +169,16 @@ int main()
 	 		exit(1);
 	 	}
 
-    // pthread_mutex_init(&mutex, NULL);
+#ifdef _SHM_SEM_
     sem_init(wrt,0,1);
 	sem_init(wrd,0,N);
 	sem_init(mutex,0,1);
+#else
+	printf("sem_open\n");
+	wrt = sem_open(WRT_NAME, O_CREAT, 0644, 1);
+	wrd = sem_open(WRD_NAME, O_CREAT, 0644, N);
+	mutex = sem_open(MUTEX_NAME, O_CREAT, 0644, 1);
+#endif
 
 	*cnt = 1;
 	*numreader = 0;
@@ -197,6 +211,9 @@ int main()
     sem_destroy(mutex);
     sem_destroy(wrt);
 	sem_destroy(wrd);
+	shmctl(cnt_shmid, IPC_RMID, NULL);
+	shmctl(numreader_shmid, IPC_RMID, NULL);
+	shmctl(trigger_shmid, IPC_RMID, NULL);
 
     return 0;
 

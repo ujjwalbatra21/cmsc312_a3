@@ -13,10 +13,14 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- #define _DEBUG_
+ // #define _SHM_SEM_
 //#define _DEBUG1_
 
 #define N 4
+
+#define WRD_NAME "/wrdsem"
+#define WRT_NAME "/wrtsem"
+#define MUTEX_NAME "/mutexsem"
 
 sem_t *wrt;
 sem_t *wrd;
@@ -65,6 +69,8 @@ int main()
    /*******************************************************************************
 						SHARED MEMORY ENSTANTIATION
    *******************************************************************************/
+#ifdef _SHM_SEM_
+	printf("shm_sem\n");
    if( (wrt_shmid = shmget(wrt_key, sizeof(sem_t), 0666)) < 0 ) //if creation fails
    {
 	   perror("wrt shmget"); //issue error
@@ -100,7 +106,7 @@ int main()
 	   perror("mutex shmat");
 	   exit(1);
    }
-
+#endif
 
 
 
@@ -144,6 +150,12 @@ int main()
 	   exit(1);
    }
 
+#ifndef _SHM_SEM_
+	printf("sem_open\n");
+	wrt = sem_open(WRT_NAME, 0);
+   wrd = sem_open(WRD_NAME, 0);
+   mutex = sem_open(MUTEX_NAME, 0);
+#endif
 
     pthread_t write[5];
 
@@ -168,6 +180,8 @@ int main()
     for(int i = 0; i < 5; i++) {
         pthread_join(write[i], NULL);
     }
+
+
 	*trigger = 0;
 
     return 0;
