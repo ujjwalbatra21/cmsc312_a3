@@ -4,7 +4,7 @@
  *  Created on: Apr 20, 2021
  *      Author: chrispy
  */
-
+ #include <signal.h>
  #include <stdio.h>
  #include <stdlib.h>
  #include <pthread.h>
@@ -25,7 +25,7 @@ int *cnt; //starts at 1
 int *numreader; //starts at 0
 int *trigger;
 
-
+pthread_t read[10];
 
 void *reader(void *rno)
 {
@@ -54,9 +54,24 @@ void *reader(void *rno)
  	sem_post(wrd);
 	//Csem_wait(&wrd);
 }
+void handle_sigint(int sig){
+	printf("\nCaught signal %d\n", sig);
+
+	for(int i = 0; i < 10; i++) {
+		printf("Joining Thread %d\n", i);
+        pthread_join(read[i], NULL);
+    }
+	printf("Destorying Sems\n");
+    sem_destroy(mutex);
+    sem_destroy(wrt);
+	sem_destroy(wrd);
+	exit(1);
+}
 
 int main()
 {
+
+	signal(SIGINT, handle_sigint);
 
     pthread_t read[10];
 
