@@ -13,7 +13,7 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- // #define _SHM_SEM_
+ #define _SHM_SEM_
 //#define _DEBUG1_
 
 #define N 4
@@ -47,7 +47,7 @@ void *reader(void *rno)
 	for(int i = 0; i < 10; i++){
     // Reading Section
     printf("Reader %d: read cnt as %d\n",*((int *)rno),*cnt);
-	usleep(10000);
+	usleep(5000);
 	}
     // Reader acquire the lock before modifying numreader
     sem_wait(mutex);
@@ -60,6 +60,24 @@ void *reader(void *rno)
  	sem_post(wrd);
 	//Csem_wait(&wrd);
 }
+
+void writer(int wno)
+{
+	printf("created writer %d\n", wno);
+	while(*trigger != 2){
+	}
+	//Csem_post(&wrd);
+	//Csem_wait(&wrd);
+	sem_wait(wrt);
+    *cnt = *cnt * 2;
+    printf("Writer %d modified cnt to %d\n", wno,*cnt);
+	usleep(250000);
+    sem_post(wrt);
+	//Csem_post(&wrd);
+	//Csem_wait(&wrd);
+
+}
+
 
 int main()
 {

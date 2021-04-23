@@ -13,8 +13,8 @@
  #include <semaphore.h>
  #include <sys/shm.h>
 
- // #define _SHM_SEM_
-//#define _DEBUG1_
+ #define _SHM_SEM_
+#define _PROC_
 
 #define N 4
 
@@ -29,6 +29,24 @@ int *cnt; //starts at 1
 int *numreader; //starts at 0
 int *trigger;
 
+#ifdef _PROC_
+void writer(int wno)
+{
+	printf("created writer %d\n", wno);
+	while(*trigger != 2){
+	}
+	//Csem_post(&wrd);
+	//Csem_wait(&wrd);
+	sem_wait(wrt);
+    *cnt = *cnt * 2;
+    printf("Writer %d modified cnt to %d\n", wno,*cnt);
+	// usleep(250000);
+    sem_post(wrt);
+	//Csem_post(&wrd);
+	//Csem_wait(&wrd);
+
+}
+#else
 void *writer(void *wno)
 {
 	//Csem_post(&wrd);
@@ -36,12 +54,13 @@ void *writer(void *wno)
 	sem_wait(wrt);
     *cnt = *cnt * 2;
     printf("Writer %d modified cnt to %d\n",(*((int *)wno)),*cnt);
-	usleep(50000);
+	// usleep(50000);
     sem_post(wrt);
 	//Csem_post(&wrd);
 	//Csem_wait(&wrd);
 
 }
+#endif
 
 
 
@@ -162,10 +181,26 @@ int main()
 
     int a[10] = {1,2,3,4,5,6,7,8,9,10}; //Just used for numbering the producer and consumer
 	*trigger = 0;
+	int pid;
 
 	while(*trigger == 0){
 		// usleep(100);
 	}
+
+
+#ifdef _PROC_
+	int i;
+	for(i = 0; i < 5; i++) {
+		if(fork() == 0){
+			writer(a[i]);
+			printf("child exit\n");
+			exit(0);
+		}
+	}
+	*trigger = 2;
+
+
+#else
 
     for(int i = 0; i < 5; i++) {
 
@@ -181,9 +216,13 @@ int main()
         pthread_join(write[i], NULL);
     }
 
-
+#endif
+	sleep(5);
+	printf("parent exit\n");
 	*trigger = 0;
-
+	shmdt(cnt);
+	shmdt(numreader);
+	shmdt(trigger);
     return 0;
 
 }
