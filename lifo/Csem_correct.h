@@ -53,4 +53,9 @@ void Csem_post( Csem_t *cs){ //signal
 	sem_post(&cs->mutex);
 }
 
+int Csem_getvalue(Csem_t *cs, int *sval){
+	*sval = cs->val;
+	return 0;
+}
+
 #endif
