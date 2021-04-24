@@ -20,7 +20,7 @@ struct node list[25];
 int main(void){
 
     printf("%lu\n", sizeof(struct node));
-    printf("%lu\n", sizeof(list));
+ *   printf("%lu\n", sizeof(list));
     printf("%lu\n", sizeof(int));
     // printf("%lu\n", sizeof());
     return 0;
