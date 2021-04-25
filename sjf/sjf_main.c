@@ -56,27 +56,66 @@ pthread_t servers[10];
 int createclient = 5;
 int createserver = 10;
 
+// int compare(const void * a, const void * b){
+// 	job_t *nodeA = (job_t *)a; 
+// 	job_t *nodeB = (job_t *)b; 
+// 	return (nodeA->data - nodeB->data); 
+// }
+
+// void insert_job(job_t *new_job){
+// 		//printf("insert: globalq_index = %d\n", *globalq_index);
+// 		job_t some_job = *new_job;
+// 	if (*globalq_index < GLOBALQ_LEN) 
+// 	{
+//         globalq[*globalq_index] = some_job;
+// 		*globalq_index = *globalq_index + 1;
+//     } else {
+//         printf("globalq overflow\n");
+//     }
+// }
+
 void insert_job(job_t *new_job){
-		job_t some_job = *new_job;
-	if (*globalq_index < GLOBALQ_LEN) 
-	{
-        globalq[*globalq_index] = some_job;
-		*globalq_index = *globalq_index + 1;
-    } else {
-        printf("globalq overflow\n");
-    }
+	int i, c, d;
+	job_t swap; 
+	int n = 25; 
+	job_t some_job = *new_job;
+	*globalq = some_job;
+	for (c = 0 ; c < n - 1; c++) {
+		for (d = 0 ; d < n - c - 1; d++) {
+			if (globalq[d].data > globalq[d+1].data) {
+				swap = globalq[d];
+				globalq[d] = globalq[d+1];
+				globalq[d+1] = swap;
+			}
+		}
+	}
+	*globalq_index = *globalq_index + 1;
 }
 
+
 void dequeue_job(job_t *head_job) {
+	// printf("dequeing job\n");
 	job_t some_job;
 	int temp_data, temp_id;
-    if (*globalq_index > 0) {
-		*globalq_index = *globalq_index - 1;
-		some_job = globalq[*globalq_index];
-		*head_job = some_job;
-    } else {
-        printf("globalq underflow\n");
-    }
+	sem_getvalue(qfull, &temp_data);
+	*globalq_index = *globalq_index - 1;
+	// some_job = globalq[(*globalq_index)];
+	for( int i = 0; i < GLOBALQ_LEN; i++){
+		if(globalq[i].data != 0){
+			some_job = globalq[i];
+			*head_job = some_job;
+			some_job.data = 0;
+			some_job.id = 0;
+			globalq[i] = some_job;
+			break;
+		}
+	}
+	
+
+
+    // } else {
+    //     printf("globalq underflow\n");
+    // }
 }
 
 
@@ -91,10 +130,13 @@ void client(void){
 	int client_count = 0;
 	double time_taken = 0;
 	double total_time = 0;
+	
 	srand((unsigned)process_num ^ (my_pid<<16));
 	numjobs = (rand() % 24) + 1; 	
 
+	// printf("created client %d\n", process_num);
 	sleep(1);
+	// printf("starting client %d\tnumjobs: %d\n", process_num, numjobs);
 	
 
     int i=0;
@@ -104,7 +146,7 @@ void client(void){
 		srand((unsigned)process_num ^ (my_pid<<16));
         joblen = (rand() % 900) + 100;	
 		new_job.data = joblen; 
-		new_job.id = process_num; 
+		new_job.id = process_num;
 
         sem_wait(qfull); // sem=0: wait. sem>0: go and decrement it
 		
@@ -115,7 +157,7 @@ void client(void){
            a buffer overflow error */
 
         sem_wait(qmutex); /* protecting critical section */
-		insert_job(&new_job);
+		insert_job(&new_job); 
         sem_post(qmutex);
 		// sem_getvalue(qmutex, &bruh);
 		// printf("client %d : qmutex = %d\n", process_num, bruh); 
@@ -181,6 +223,7 @@ void *server(void *arg){
 
 }
 
+
 void handle_sigint(int sig){
 	if(getpid() == parent_pid){
 		printf("\n***Caught signal %d***\n", sig);
@@ -214,6 +257,7 @@ void handle_sigint(int sig){
 		exit(0);
 	}
 }
+
 
 void shm_init(void){
 
@@ -358,11 +402,7 @@ void shm_init(void){
 
 // Compare method to compare 2 job sizes and return shortest job
 // Needed for qsort
-// int compare(const void * a, const void * b){
-// 	struct job_t *nodeA = (struct job_t *)a; 
-// 	struct job_t *nodeB = (struct job_t *)b; 
-// 	return (nodeA->data - nodeB->data); //returns negative if b > a
-// } 
+
 
 #ifdef _CMD_ARGS_
 int main(int argc, char *argv[]){
@@ -372,7 +412,7 @@ int main(int argc, char *argv[]){
 		exit(0);
 	}
 	else if(argc > 3){
-		printf("too command line arguments\n");
+		printf("To many command line arguments\n");
 		exit(0);
 	}
 	clock_t start = clock();
